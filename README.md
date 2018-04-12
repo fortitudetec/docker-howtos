@@ -62,9 +62,21 @@ The container id is returned after starting the container.
 
 > NOTE: The exposed port is not 8080 it is dynamically allowed to 32769 for this container.
 
+## Accessing a Running Container
+
+While a container is running it is very useful to be able to run commands inside the container like bash for inspection, testing, debugging, etc.
+
+    docker exec -it 69d63580eb4e bash
+
 ## Docker Volumes
 
 Docker provides volumes as a way of both injecting runtime data into the container as well as persisting data between instances of the container.
+
+### Host Volume
+
+A host volume bind mounts a file system path from the host into the container for the container to access.
+
+    docker run --name test -d --rm -v /var/log/myappslog:/myapps/logs centos
 
 ### Anonymous Volumes
 
@@ -113,7 +125,7 @@ If you want to use known host ip address and port mappings:
 
 This networking features requires an external key value store or swarm.
 
-#### Regular Setup
+#### ZooKeeper KV Setup
 
     mkdir -p /etc/docker
     cat >/etc/docker/daemon.json <<EOF
@@ -136,23 +148,42 @@ Now that you have your web server running how you access it from within the over
     docker run --name test -d --rm -v $PWD/:/opt/http simplehttp
     docker network connect testnetwork
 
-
-
-
 ## Docker Logs
 
+The basic install of Docker will give you standard logging of your container if all your log output is through stderr or stdout.
 
+    docker logs -f test
 
+If you service logs to local files you should use a Volume to store the logs files so that you can access the logs from outside the container.
 
-Base Images:
+## Fun Example
 
-Install inline or script (layers)
-Entrypoints and commands (tini systemd)
-Health check scripts
-Anonymous volumes
+First build all the images in this howto:
 
-Running
+    ./build-all.sh
 
-Running restart always attached or deattahced
-Capabilities
-Logs
+Run a full GNOME Desktop in a container:
+
+    docker run \
+      --name desktop \
+      -d \
+      --rm \
+      -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+      --cap-add=SYS_ADMIN \
+      -p 3389:3389 \
+      --stop-signal SIGRTMIN+3 \
+      ephemeral-desktop
+
+Run a full GNOME Desktop in a container with persistent changes:
+
+    docker run \
+      --name desktop \
+      -d \
+      --rm \
+      -v /sys/fs/cgroup:/sys/fs/cgroup:ro \
+      --cap-add=SYS_ADMIN \
+      -p 3389:3389 \
+      -e VOLUME_ROOT="/desktop_root" \
+      -v ${PWD}/desktop_root:/desktop_root \
+      --stop-signal SIGRTMIN+3 \
+      persistent-desktop
